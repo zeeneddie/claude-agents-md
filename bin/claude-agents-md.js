@@ -9,6 +9,9 @@ import { fileURLToPath } from 'url';
 import { execSync } from 'child_process';
 import readline from 'readline';
 
+// Disable Claude's npm installation warning since we're running through this wrapper
+process.env.DISABLE_INSTALLATION_CHECKS = '1';
+
 // ANSI color codes
 const RED = '\x1b[31m';
 const YELLOW = '\x1b[33m';
@@ -308,11 +311,6 @@ async function run() {
 
   // Read the original CLI file content
   let cliContent = fs.readFileSync(originalCliPath, 'utf8');
-
-  if (claudeDir === localClaudeDir) {
-    cliContent = cliContent.replace(/"punycode"/g, '"punycode/"');
-    debug('Replaced all instances of "punycode" with "punycode/"');
-  }
 
   // Replace CLAUDE.md with AGENTS.md
   cliContent = cliContent.replace(/([^,])CLAUDE\.md/g, '$1AGENTS.md');
