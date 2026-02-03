@@ -91,6 +91,16 @@ while (!fs.existsSync(path.join(nodeModulesDir, 'node_modules')) && nodeModulesD
 // Path to check package info
 const packageJsonPath = path.join(nodeModulesDir, 'package.json');
 
+// Check if claude CLI is available globally
+function hasGlobalClaudeCli() {
+  try {
+    execSync('claude --version', { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 // Check for updates to Claude package
 async function checkForUpdates() {
   try {
@@ -101,14 +111,14 @@ async function checkForUpdates() {
     const latestVersionCmd = "npm view @anthropic-ai/claude-code version --loglevel=error";
     const latestVersion = execSync(latestVersionCmd, { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] }).trim();
     debug(`Latest Claude version on npm: ${latestVersion}`);
-    
+
     // Get our current installed version
     const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
     const dependencies = packageJson.dependencies || {};
     const currentVersion = dependencies['@anthropic-ai/claude-code'];
-    
+
     debug(`Claude version from package.json: ${currentVersion}`);
-    
+
     // Get the global Claude version if available
     let globalVersion;
     if (globalClaudeDir) {
@@ -118,7 +128,7 @@ async function checkForUpdates() {
           const globalPackageJson = JSON.parse(fs.readFileSync(globalPackageJsonPath, 'utf8'));
           globalVersion = globalPackageJson.version;
           debug(`Global Claude version: ${globalVersion}`);
-          
+
           // If global version is latest, inform user
           if (globalVersion === latestVersion) {
             debug(`Global Claude installation is already the latest version`);
@@ -130,23 +140,35 @@ async function checkForUpdates() {
         debug(`Error getting global Claude version: ${err.message}`);
       }
     }
-    
+
     // If using a specific version (not "latest"), and it's out of date, update
     if (currentVersion !== "latest" && currentVersion !== latestVersion) {
       console.log(`Updating Claude package from ${currentVersion || 'unknown'} to ${latestVersion}...`);
-      
-      // Update package.json
+
+      // Update package.json with the new version
       packageJson.dependencies['@anthropic-ai/claude-code'] = latestVersion;
       fs.writeFileSync(packageJsonPath, JSON.stringify(packageJson, null, 2));
-      
-      // Run npm install
-      console.log("Running npm install to update dependencies...");
-      execSync("npm install --loglevel=error", { stdio: 'inherit', cwd: nodeModulesDir });
-      console.log("Update complete!");
+
+      // Prefer claude's native installer if available, otherwise fall back to npm
+      if (hasGlobalClaudeCli()) {
+        debug("Using claude install for update (native installer)");
+        try {
+          execSync("claude install --force", { stdio: ['pipe', 'pipe', 'pipe'], cwd: nodeModulesDir });
+          console.log("Update complete (via claude install)!");
+        } catch (err) {
+          debug(`claude install failed, falling back to npm: ${err.message}`);
+          execSync("npm install --loglevel=error", { stdio: ['pipe', 'pipe', 'pipe'], cwd: nodeModulesDir });
+          console.log("Update complete!");
+        }
+      } else {
+        debug("Using npm install for update");
+        execSync("npm install --loglevel=error", { stdio: ['pipe', 'pipe', 'pipe'], cwd: nodeModulesDir });
+        console.log("Update complete!");
+      }
     } else if (currentVersion === "latest") {
       // If using "latest", just make sure we have the latest version installed
       debug("Using 'latest' tag in package.json, running npm install to ensure we have the newest version");
-      execSync("npm install --loglevel=error", { stdio: 'inherit', cwd: nodeModulesDir });
+      execSync("npm install --loglevel=error", { stdio: ['pipe', 'pipe', 'pipe'], cwd: nodeModulesDir });
     }
   } catch (error) {
     console.error("Error checking for updates:", error.message);
