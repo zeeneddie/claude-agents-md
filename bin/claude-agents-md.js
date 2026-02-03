@@ -95,10 +95,11 @@ const packageJsonPath = path.join(nodeModulesDir, 'package.json');
 async function checkForUpdates() {
   try {
     debug("Checking for Claude package updates...");
-    
+
     // Get the latest version available on npm
-    const latestVersionCmd = "npm view @anthropic-ai/claude-code version";
-    const latestVersion = execSync(latestVersionCmd).toString().trim();
+    // Use --loglevel=error to suppress npm warnings about unknown config options
+    const latestVersionCmd = "npm view @anthropic-ai/claude-code version --loglevel=error";
+    const latestVersion = execSync(latestVersionCmd, { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] }).trim();
     debug(`Latest Claude version on npm: ${latestVersion}`);
     
     // Get our current installed version
@@ -140,12 +141,12 @@ async function checkForUpdates() {
       
       // Run npm install
       console.log("Running npm install to update dependencies...");
-      execSync("npm install", { stdio: 'inherit', cwd: nodeModulesDir });
+      execSync("npm install --loglevel=error", { stdio: 'inherit', cwd: nodeModulesDir });
       console.log("Update complete!");
     } else if (currentVersion === "latest") {
       // If using "latest", just make sure we have the latest version installed
       debug("Using 'latest' tag in package.json, running npm install to ensure we have the newest version");
-      execSync("npm install", { stdio: 'inherit', cwd: nodeModulesDir });
+      execSync("npm install --loglevel=error", { stdio: 'inherit', cwd: nodeModulesDir });
     }
   } catch (error) {
     console.error("Error checking for updates:", error.message);
@@ -156,7 +157,7 @@ async function checkForUpdates() {
 // Try to find global installation of Claude CLI first
 let globalClaudeDir;
 try {
-  const globalNodeModules = execSync('npm -g root').toString().trim();
+  const globalNodeModules = execSync('npm -g root --loglevel=error', { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] }).trim();
   debug(`Global node_modules: ${globalNodeModules}`);
   const potentialGlobalDir = path.join(globalNodeModules, '@anthropic-ai', 'claude-code');
   
