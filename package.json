@@ -7,7 +7,7 @@
     "cl": "./bin/cl"
   },
   "dependencies": {
-    "@anthropic-ai/claude-code": "0.2.35",
+    "@anthropic-ai/claude-code": "2.1.29",
     "punycode": "latest"
   },
   "type": "module",
